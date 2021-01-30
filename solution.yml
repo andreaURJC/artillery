@@ -1,0 +1,156 @@
+# Requisitos/especificaciones:
+# Fase unica de 40 segundos:phase 1 duration 40 - OK
+# Tasa de 5 usuarios/ segundo: arrivalRate - OK
+# Solo se permitiran 8 conexiones simultaneas a la API - OK
+# 0% tasa de error - OK
+# 95% peticiones no supere los 100ms de latencia - OK
+
+# Escenarios:
+# 1. Consulta del Libro 1: Usuario sin loggear recupera todos los libros y pide el primero para mas info. (prob 70%)
+# 2. Creacion del libro: Usuario logeado crea un libro y lo pide para comprobarlo. (prob 20%)
+# 3. Borrado de un libro: Usuario administrador crea un libro, comprueba que existe, lo borra y comprueba que no existe. (prob 10%)
+
+# Verificar los codigos HTTPS de cada peticion
+
+
+#RUN: artillery run myConfig.yml
+
+config:
+  plugins:
+    expect: { }
+  target: "https://localhost:8443/api"  ########## HTTP / HTTPS
+  tls:
+    rejectUnauthorized: false
+  phases:
+    - duration: 40
+      name: "Artillery tests"
+      arrivalRate: 5
+  http:
+    pool: 8
+  payload:
+    path: "books.csv"
+    fields:
+      - "csv_title"
+      - "csv_description"
+  variables:
+    roleUserUsername:
+      - "user"
+    roleAdminUsername:
+      - "admin"
+    roleUserPassword:
+      - "pass"
+    roleAdminPassword:
+      - "pass"
+
+  ensure:
+    p95: 100
+    maxErrorRate: 0
+
+scenarios:
+  - name: "Scenario 1: Get all books and check the first one."
+    weight: 7
+    flow:
+      - get:
+          url: "/books/"
+          json: "$"
+          capture:
+            - json: "$[0].id"
+              as: "id"
+            - json: "$[0].title"
+              as: first_title
+          expect:
+            - statusCode: 200
+            - contentType: json
+      - get:
+          url: "/books/{{ id }}"
+          json: "$"
+          capture:
+            json: "$.title"
+            as: "title"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - equals:
+                - "title"
+                - first_title
+
+  - name: "Scenario 2: Logged user create new book and get it to ensure is created."
+    weight: 2
+    flow:
+      - get:
+          url: "/logIn"
+          auth:
+            user: "{{roleUserUsername}}"
+            pass: "{{roleUserPassword}}"
+      - post:
+          url: "/books/"
+          json:
+            title: "{{ csv_title }}"
+            description: "{{ csv_description }}"
+          capture:
+            - json: "$.id"
+              as: "id"
+            - json: "$.title"
+              as: title_created
+          expect:
+            - statusCode: 201
+            - contentType: json
+            - equals:
+                - "{{ csv_title }}"
+                - "{{ title_created }}"
+      - get:
+          url: "/books/{{ id }}"
+          json: "$"
+          capture:
+            json: "$.title"
+            as: title_obtained
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - equals:
+                - "{{ title_obtained }}"
+                - "{{ csv_title }}"
+  - name: "Scenario 3: Get all books and check the first one."
+    weight: 1
+    flow:
+      - get:
+          url: "/logIn"
+          auth:
+            user: "{{roleAdminUsername}}"
+            pass: "{{roleAdminPassword}}"
+      - post:
+          url: "/books/"
+          json:
+            title: "{{ csv_title }}"
+            description: "{{ csv_description }}"
+          capture:
+            - json: "$.id"
+              as: "id"
+            - json: "$.title"
+              as: title_created
+          expect:
+            - statusCode: 201
+            - contentType: json
+            - equals:
+                - "{{ csv_title }}"
+                - "{{ title_created }}"
+      - get:
+          url: "/books/{{ id }}"
+          json: "$"
+          capture:
+            json: "$.title"
+            as: title_obtained
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - equals:
+                - "{{ title_obtained }}"
+                - "{{ csv_title }}"
+      - delete:
+          url: "/books/{{ id }}"
+          expect:
+            - statusCode: 204
+      - get:
+          url: "/books/{{ id }}"
+          expect:
+            - statusCode: 404
