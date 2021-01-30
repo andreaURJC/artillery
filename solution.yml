@@ -1,4 +1,4 @@
-# Requisitos/especificaciones:
+# Requisitos:
 # Fase unica de 40 segundos:phase 1 duration 40 - OK
 # Tasa de 5 usuarios/ segundo: arrivalRate - OK
 # Solo se permitiran 8 conexiones simultaneas a la API - OK
@@ -6,19 +6,19 @@
 # 95% peticiones no supere los 100ms de latencia - OK
 
 # Escenarios:
-# 1. Consulta del Libro 1: Usuario sin loggear recupera todos los libros y pide el primero para mas info. (prob 70%)
-# 2. Creacion del libro: Usuario logeado crea un libro y lo pide para comprobarlo. (prob 20%)
-# 3. Borrado de un libro: Usuario administrador crea un libro, comprueba que existe, lo borra y comprueba que no existe. (prob 10%)
+# 1. Consulta del Libro 1: Usuario sin loggear recupera todos los libros y pide el primero para mas info. (prob 70%) - OK
+# 2. Creacion del libro: Usuario logeado crea un libro y lo pide para comprobarlo. (prob 20%) - OK
+# 3. Borrado de un libro: Usuario administrador crea un libro, comprueba que existe, lo borra y comprueba que no existe. (prob 10%) - OK
 
-# Verificar los codigos HTTPS de cada peticion
+# Verificar los codigos HTTPS de cada peticion.
 
-
-#RUN: artillery run myConfig.yml
+# RUN: artillery run myConfig.yml
+# RUN AND OUTPUT: artillery run --output output.json solution.yml
 
 config:
   plugins:
     expect: { }
-  target: "https://localhost:8443/api"  ########## HTTP / HTTPS
+  target: "https://localhost:8443/api"
   tls:
     rejectUnauthorized: false
   phases:
